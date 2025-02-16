@@ -1,0 +1,728 @@
+---
+title: "Taxi analysis"
+author: "Khanh Le"
+date: "2024-06-27"
+output: html_document
+---
+
+# [Import dữ liệu và các thư viện cần thiết]()
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = normalizePath("D:/R/project")) 
+R.version
+getwd()
+```
+
+```{r}
+# require pacman
+if (!require("pacman")) install.packages("pacman")
+```
+
+
+```{r}
+pacman::p_load(
+  ggplot2,
+  mvtnorm,
+  GGally,
+  corrplot,
+  readxl,
+  tidyverse,
+  gridExtra,
+  grid,
+  plotly,
+  ggcorrplot,
+  FactoMineR,
+  factoextra,
+  rgl,
+  scatterplot3d,
+  inspectdf,
+  mvnormtest,
+  pastecs,
+  viridis,
+  psych
+)
+```
+
+```{r}
+data = read_csv("Data/2017_Yellow_Taxi_Trip_Data.csv")
+```
+
+
+```{r}
+data = data[, -c(1)]
+head(data)
+```
+```{r}
+str(data)
+```
+
+```{r}
+duplicated_rows = data[duplicated(data),]
+duplicated_rows
+```
+
+```{r}
+colSums(is.na(data))
+```
+
+* Convert tpep_pickup_datetime & tpep_dropoff_datetime to datetime
+
+```{r}
+data_type_pickup = class(data$tpep_pickup_datetime)
+data_type_dropoff = class(data$tpep_dropoff_datetime)
+
+print(paste("Data type of tpep_pickup_datetime: ", data_type_pickup))
+print(paste("Data type of tpep_dropoff_datetime: ", data_type_dropoff))
+
+data$tpep_pickup_datetime <- as.POSIXct(data$tpep_pickup_datetime, format = "%m/%d/%Y %H:%M")
+data$tpep_dropoff_datetime <- as.POSIXct(data$tpep_dropoff_datetime, format = "%m/%d/%Y %H:%M")
+
+data_type_pickup = class(data$tpep_pickup_datetime)
+data_type_dropoff = class(data$tpep_dropoff_datetime)
+
+print(paste("Data type of tpep_pickup_datetime: ", data_type_pickup))
+print(paste("Data type of tpep_dropoff_datetime: ", data_type_dropoff))
+```
+
+# [Thông tin về dữ liệu và phương pháp nghiên cứu]()  
+**Thông tin về tập dữ liệu**  
+- 'VendorID' - Mã cho biết nhà cung cấp TPEP đã cung cấp hồ sơ. (1='Creative Mobile Technologies, LLC', 2='VeriFone Inc')  
+- 'tpep_pickup_datetime' - Ngày và giờ khi đồng hồ được bật.  
+- 'tpep_dropoff_datetime' - Ngày và giờ khi đồng hồ được ngắt.  
+- 'passenger_count' - Số lượng hành khách trên xe.  
+- 'trip_distance' - Khoảng cách chuyến đi đã trôi qua tính bằng dặm do đồng hồ taxi báo cáo.  
+- 'RatecodeID' - Mã giá cước cuối cùng có hiệu lực vào cuối chuyến đi. (1='Giá chuẩn', 2='JFK', 3='Newark', 4='Nassau of Westchester', 5='Giá đã thương lượng', 6='Đi theo nhóm', 99='NULL/không xác định')  
+- 'store_and_fwd_flag' - Cờ này cho biết liệu hồ sơ chuyến đi có được lưu trong bộ nhớ xe trước khi gửi đến nhà cung cấp hay không, còn gọi là "lưu trữ và chuyển tiếp", vì xe không có kết nối với máy chủ. (Y='lưu trữ và chuyển tiếp chuyến đi', N='không phải là chuyến đi lưu trữ và chuyển tiếp')  
+- 'PULocationID' - Khu vực taxi TLC mà đồng hồ tính cước đã được bật  
+- 'DOLocationID' - Khu vực taxi TLC mà đồng hồ tính cước đã được tắt  
+- 'payment_type' - Mã số biểu thị cách hành khách thanh toán cho chuyến đi. (0= 'Flex Fare trip', 1= 'Credit card', 2= 'Cash', 3= 'No charge', 4= 'Dispute', 5= 'Unknown', 6= 'Voided trip')  
+- 'fare_amount' - Giá vé theo thời gian và khoảng cách được tính theo đồng hồ. Để biết thêm thông tin về các cột sau  
+- 'extra' - Các khoản phụ phí và phụ thu khác.   
+- 'mta_tax' - Thuế được tự động kích hoạt dựa trên mức giá theo đồng hồ đang sử dụng.  
+- 'tip_amount' - Số tiền boa – Trường này được tự động điền cho tiền boa bằng thẻ tín dụng. Tiền boa bằng tiền mặt không được bao gồm.  
+- 'tolls_amount' - Tổng số tiền của tất cả các khoản phí cầu đường đã thanh toán trong chuyến đi.  
+- 'improvement_surcharge' - Phụ phí cải thiện được đánh giá cho các chuyến đi tại thời điểm hạ cờ. Phụ phí cải thiện bắt đầu được áp  dụng vào năm 2015.  
+- 'total_amount' - Tổng số tiền tính cho hành khách. Không bao gồm tiền boa bằng tiền mặt.  
+
+**Ghi chú về Bộ dữ liệu**: Bộ dữ liệu chứa 22699 hàng và 17 cột, không có giá trị bị thiếu hoặc hàng trùng lặp. Tất cả các cột số đều là số dương. 
+
+
+# [Phân tích dữ liệu]()
+
+```{r}
+eda = data
+eda = eda[, -c(8,9)]
+```
+
+```{r}
+# Convert vendorID 1='Creative Mobile Technologies, LLC', 2='VeriFone Inc'
+eda$VendorID <- ifelse(eda$VendorID == 1, 'Creative Mobile Technologies, LLC', 'VeriFone Inc')
+# Convert RatecodeID 1='Standard rate', 2='JFK', 3='Newark', 4='Nassau or Westchester', 5='Negotiated fare', 6='Group ride', 99='NULL/Unknown'
+eda$RatecodeID <- ifelse(eda$RatecodeID == 1, 'Standard rate', ifelse(eda$RatecodeID == 2, 'JFK', ifelse(eda$RatecodeID == 3, 'Newark', ifelse(eda$RatecodeID == 4, 'Nassau or Westchester', ifelse(eda$RatecodeID == 5, 'Negotiated fare', ifelse(eda$RatecodeID == 6, 'Group ride', 'NULL/Unknown'))))))
+# Convert store_and_fwd_flag Y='store and forward trip', N='not a store and forward trip'
+eda$store_and_fwd_flag <- ifelse(eda$store_and_fwd_flag == 'Y', 'store and forward trip', 'not a store and forward trip')
+# Convert payment_type 0='Flex Fare trip', 1='Credit card', 2='Cash', 3='No charge', 4='Dispute', 5='Unknown', 6='Voided trip'
+eda$payment_type <- ifelse(eda$payment_type == 0, 'Flex Fare trip', ifelse(eda$payment_type == 1, 'Credit card', ifelse(eda$payment_type == 2, 'Cash', ifelse(eda$payment_type == 3, 'No charge', ifelse(eda$payment_type == 4, 'Dispute', ifelse(eda$payment_type == 5, 'Unknown', 'Voided trip'))))))
+```
+
+```{r}
+# Convert to factor
+eda$VendorID <- as.factor(eda$VendorID)
+eda$RatecodeID <- as.factor(eda$RatecodeID)
+eda$store_and_fwd_flag <- as.factor(eda$store_and_fwd_flag)
+eda$payment_type <- as.factor(eda$payment_type)
+```
+
+
+```{r}
+str(eda)
+```
+```{r}
+# Extract number columns
+num_cols <- eda %>% select_if(is.numeric) %>% names()
+num_cols
+```
+
+```{r} 
+# stat.desc 
+stats = stat.desc(eda[,num_cols])
+formatted_stats <- format(stats, scientific = FALSE)
+formatted_stats
+```
+Có một số thông tin nổi bật từ bảng thống kê tóm tắt này. Rõ ràng có một số giá trị ngoại lệ trong một số biến, như ```tip_amount``` ($200) và ```total_amount``` ($1.200). Ngoài ra, một số biến, như ```mta_tax```, dường như gần như không đổi trong toàn bộ dữ liệu, ta không mong đợi chúng mang lại khả năng dự đoán cao.  
+
+
+````{r, fig.width=25, fig.height=15}
+plot_all_densities <- function(data, include_cols = num_cols , fill_color = "skyblue", alpha_value = 0.3, base_size = 15) {
+  plot_list <- list()
+  for (var in names(data[, num_cols])) {
+    p = ggplot(data, aes_string(x = var)) +
+      geom_histogram(fill = "skyblue", color = "blue", alpha = alpha_value, stat='count') +  
+      theme_minimal(base_size = base_size) + 
+      labs(title = var,
+           x = "",
+           y = "Frequency",
+           ) +
+      geom_rug(sides = "b")
+     plot_list[[var]] <- p
+  }
+  title_grob <- textGrob("Distribution Of Numerical Columns", gp = gpar(fontsize = 20, fontface = "bold"))
+  grid.arrange(title_grob, grobs=plot_list, ncol = 3, nrow = 3)
+}
+
+plot_all_densities(eda)
+````
+
+```{r, fig.width=25, fig.height=15}
+# countplot for factor columns
+plot_all_countplots <- function(data, include_cols = c("VendorID", "RatecodeID", "store_and_fwd_flag", "payment_type"), fill_color = "skyblue", alpha_value = 0.8, base_size = 15) {
+  plot_list <- list()
+  for (var in include_cols) {
+    p = ggplot(data, aes_string(x = var)) +
+      geom_bar(fill = "aquamarine4", alpha = alpha_value) +  
+      theme_minimal(base_size = base_size) + 
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      theme(
+        plot.title = element_text(size = 16), 
+        axis.title.x = element_text(size = 16), 
+        axis.title.y = element_text(size = 16), 
+        axis.text.x = element_text(size = 16), 
+        axis.text.y = element_text(size = 16),
+        legend.title = element_text(size = 16), 
+        legend.text = element_text(size = 16)   
+    ) +
+      labs(title = var,
+           x = "",
+           y = "Frequency",
+           ) +
+      geom_text(stat='count', aes(label=..count..), vjust=-0.5)
+    plot_list[[var]] <- p
+  }
+  title_grob <- textGrob("Countplot For Factor Columns", gp = gpar(fontsize = 20, fontface = "bold"))
+  grid.arrange(title_grob, grobs=plot_list, ncol = 2, nrow = 2)
+}
+plot_all_countplots(eda)
+```
+
+
+* Create duration column  
+Tạo một cột mới có tên là ```duration```, thể hiện tổng số phút của mỗi chuyến đi taxi.  
+```{r}
+eda$duration <- as.numeric(difftime(eda$tpep_dropoff_datetime, eda$tpep_pickup_datetime, units = "mins"))
+head(eda$duration)
+```
+* Xác định outliers  
+Ta sẽ tập trung xử lý outliers cho các cột `trip_distance`, `fare_amount`, `duration`
+```{r}
+num_cols <- eda %>% select_if(is.numeric) %>% names()
+num_cols
+```
+
+```{r, fig.width=15, fig.height=10}
+boxplot(eda[, num_cols], rotate = 45, col = "skyblue", main = "Boxplot of numerical columns")
+```
+
+* Xử lý outliers  
+`trip_distance` outliers    
+Có những chuyến đi có khoảng cách là 0. Những khoảng cách này có phản ánh dữ liệu sai không, hay chúng là những chuyến đi rất ngắn được làm tròn xuống?  
+Để kiểm tra, ta sắp xếp các giá trị cột, loại bỏ các giá trị trùng lặp và kiểm tra ít nhất 10 giá trị.   
+```{r}
+head(sort(unique(eda$trip_distance)), 10)
+```
+Khoảng cách được ghi lại với độ chính xác cao. Tuy nhiên, có thể các chuyến đi có khoảng cách bằng không nếu hành khách gọi taxi rồi đổi ý. Bên cạnh đó, có đủ giá trị bằng không trong dữ liệu để gây ra vấn đề không?  
+
+```{r}
+sum(eda$trip_distance == 0)
+```
+
+148 trong số ~23.000 chuyến đi là không đáng kể. Ta có thể quy cho nó giá trị 0,01, nhưng nó không có nhiều tác động đến mô hình. Do đó, cột `trip_distance` sẽ không bị ảnh hưởng đối với các giá trị ngoại lệ.    
+
+* Xử lý outliers cho `fare_amount`  
+```{r}
+summary(eda$fare_amount)
+```
+
+Phạm vi giá trị trong cột `fare_amount` rất lớn và các giá trị cực trị cũng không có nhiều ý nghĩa.  
+* Với các giá trị thấp: Giá trị âm là có vấn đề. Giá trị bằng 0 có thể hợp lệ nếu taxi ghi lại chuyến đi đã bị hủy ngay lập tức.    
+* Với các giá trị cao: Số tiền cước tối đa trong tập dữ liệu này gần 1.000 đô la, điều này có vẻ rất khó xảy ra trong một chuyến taxi. Giá trị cao cho tính năng này có thể được giới hạn dựa trên trực giác và số liệu thống kê. Phạm vi tứ phân vị (IQR) là 8 đô la. Công thức chuẩn Q3 + (1,5 * IQR) cho ra kết quả là 26,50 đô la. Có vẻ không phù hợp với mức giới hạn cước tối đa. Trong trường hợp này, chúng ta sẽ sử dụng hệ số 6 * IQR, với kết quả ở mức 6*IQR là 62,5 đô la  
+
+Với các giá trị nhỏ hơn 0: Ta quy về `0`
+```{r}
+eda$fare_amount[eda$fare_amount < 0] <- 0
+min(eda$fare_amount)
+```
+
+Tiếp theo gán giá trị lớn nhất là `Q3 + (6 * IQR)`.  
+```{r}
+# Tiếp theo gán giá trị lớn nhất là `Q3 + (6 * IQR)`.  
+Q3 <- quantile(eda$fare_amount, 0.75)
+IQR <- IQR(eda$fare_amount)
+upper_bound <- Q3 + (6 * IQR)
+eda$fare_amount[eda$fare_amount > upper_bound] <- upper_bound
+```
+
+```{r}
+summary(eda$fare_amount)
+```
+
+* Xử lý outliers cho `duration` 
+```{r}
+summary(eda$duration)
+```
+
+ 
+
+```{r}
+eda$duration[eda$duration < 0] <- 0
+min(eda$duration)
+```
+```{r}
+Q3 <- quantile(eda$duration, 0.75)
+IQR <- IQR(eda$duration)
+upper_bound <- Q3 + (6 * IQR)
+eda$duration[eda$duration > upper_bound] <- upper_bound
+summary(eda$duration)
+```
+
+* Xử lý outliers cho `total_amount`
+```{r}
+summary(eda$total_amount)
+```
+
+Cột `total_amount` cũng có các giá trị ngoại lệ ở cả hai extreme value dưới và trên.  
+* Giá trị thấp: Giá trị âm không hợp lý. Ta sẽ gán tất cả giá trị âm bằng 0.  
+* Giá trị cao: Gán các giá trị cao theo cùng phương pháp đã gán các giá trị ngoại lệ cho giá vé: Q3 + (6 * IQR).   
+
+```{r}
+eda$total_amount[eda$total_amount < 0] <- 0
+min(eda$total_amount)
+```
+
+```{r}
+Q3 <- quantile(eda$total_amount, 0.75)
+IQR <- IQR(eda$total_amount)
+upper_bound <- Q3 + (6 * IQR)
+eda$total_amount[eda$total_amount > upper_bound] <- upper_bound
+summary(eda$total_amount)
+```
+
+* Boxplot sau khi xử lý xong outliers  
+```{r}
+boxplot(eda[, num_cols], rotate = 45, col = "skyblue", main = "Boxplot of numerical columns")
+```
+
+## Việc sử dụng taxi thay đổi như thế nào trong một tháng?
+```{r, fig.width=15, fig.height=5}
+eda$day_of_month <- as.numeric(format(eda$tpep_pickup_datetime, "%d"))
+taxi_usage <- table(eda$day_of_month)
+taxi_usage <- as.data.frame(taxi_usage)
+colnames(taxi_usage) <- c("Day", "Count")
+ggplot(taxi_usage, aes(x = Day, y = Count, group=1)) +
+  geom_point(color = "coral4") +
+  geom_line(color = "coral3") +
+  labs(
+    title = "Figure 1: How does taxi usage change over a month",
+    x = "Day of the Month",
+    y = "Number of Taxi Rides"
+  ) +
+  theme_minimal()
+```
+
+
+Chúng tôi quan sát thấy một mô hình sử dụng taxi tương đối ổn định trong suốt mỗi ngày trong tháng. Tuy nhiên, có sự sụt giảm đáng kể về số chuyến đi vào cuối tháng. Có vẻ như họ đã sử dụng hết ngân sách đi lại của mình vào đầu và giữa tháng.  
+
+## Tháng nào có số chuyến đi taxi nhiều nhất trong năm?
+```{r, fig.width=15, fig.height=5}
+eda$month <- as.numeric(format(eda$tpep_pickup_datetime, "%m"))
+
+taxi_usage_month <- table(eda$month)
+taxi_usage_month <- as.data.frame(taxi_usage_month)
+colnames(taxi_usage_month) <- c("Month", "Count")
+ggplot(taxi_usage_month, aes(x = factor(Month), y = Count, fill = factor(Month))) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = Count), vjust = -0.5, color = "black") +
+  scale_fill_viridis_d() +
+  labs(
+    title = "Figure 2: Which month has the most taxi rides in the year",
+    x = "Month",
+    y = "Number of Taxi Rides"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+
+## Nhà cung cấp nào có số chuyến đi taxi nhiều nhất?
+```{r}
+taxi_usage_vendor <- table(eda$VendorID)
+taxi_usage_vendor <- as.data.frame(taxi_usage_vendor)
+colnames(taxi_usage_vendor) <- c("Vendor", "Count")
+ggplot(taxi_usage_vendor, aes(x = Vendor, y = Count, fill = Vendor)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = Count), vjust = -0.5, color = "black") +
+  scale_fill_viridis_d() +
+  labs(
+    title = "Figure 3: Which vendor has the most taxi rides",
+    x = "Vendor",
+    y = "Number of Taxi Rides"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+
+
+Nhận xét: Có sự khác biệt về khoảng cách chuyến đi giữa các nhà cung cấp, nhưng không quá lớn.  
+
+## Ảnh hưởng của factor đến `total_amount`  
+
+
+```{r, fig.width=15, fig.height=5}
+grid.arrange(
+  ggplot(eda, aes(x = VendorID, y = trip_distance, fill = VendorID)) +
+    geom_boxplot() +
+    labs(
+      title = "Figure 4: Is there a difference in trip distance between vendors",
+      x = "Vendor",
+      y = "Trip Distance"
+    ) +
+    theme_minimal(),
+  ggplot(eda, aes(x = RatecodeID, y = total_amount, fill = RatecodeID)) +
+    geom_boxplot() +
+    labs(
+      title = "Figure 5: Influence of RatecodeID on total amount",
+      x = "RatecodeID",
+      y = "Total Amount"
+    ) +
+    theme_minimal(),
+  ggplot(eda, aes(x = store_and_fwd_flag, y = total_amount, fill = store_and_fwd_flag)) +
+    geom_boxplot() +
+    labs(
+      title = "Figure 6: Influence of store_and_fwd_flag on total amount",
+      x = "store_and_fwd_flag",
+      y = "Total Amount"
+    ) +
+    theme_minimal(),
+  ggplot(eda, aes(x = payment_type, y = total_amount, fill = payment_type)) +
+    geom_boxplot() +
+    labs(
+      title = "Figure 7: Influence of payment_type on total amount",
+      x = "payment_type",
+      y = "Total Amount"
+    ) +
+    theme_minimal(),
+  ncol = 2
+)
+
+
+```
+
+## Doanh thu cao nhất theo ngày trong tuần, tháng, quý
+```{r}
+eda$day_of_week <- as.numeric(format(eda$tpep_pickup_datetime, "%u"))
+eda$quarter <- as.numeric(format(eda$tpep_pickup_datetime, "%m")) %/% 4 + 1
+
+```
+
+```{r}
+daily_revenue <- eda %>%
+  group_by(day_of_week) %>%
+  summarise(total_amount = sum(fare_amount, na.rm = TRUE)) %>%
+  arrange(day_of_week)
+
+monthly_revenue <- eda %>%
+  group_by(month) %>%
+  summarise(total_amount = sum(fare_amount, na.rm = TRUE)) %>%
+  arrange(month)
+
+quarterly_revenue <- eda %>%
+  group_by(quarter) %>%
+  summarise(total_amount = sum(fare_amount, na.rm = TRUE)) %>%
+  arrange(quarter)
+
+highest_daily_revenue <- daily_revenue %>%
+  filter(total_amount == max(total_amount, na.rm = TRUE))
+
+highest_monthly_revenue <- monthly_revenue %>%
+  filter(total_amount == max(total_amount, na.rm = TRUE))
+
+highest_quarterly_revenue <- quarterly_revenue %>%
+  filter(total_amount == max(total_amount, na.rm = TRUE))
+
+
+
+
+print(paste("Ngày có doanh thu cao nhất trong tuần là thứ 5", 
+            ".Với số tiền là:", highest_daily_revenue$total_amount))
+print(paste("Tháng có doanh thu cao nhất trong năm: ", highest_monthly_revenue$month, 
+            "Với số tiền là: ", highest_monthly_revenue$total_amount))
+
+
+print(paste("Qúy có doanh thu cao nhất trong năm là quý", highest_quarterly_revenue$quarter, 
+            "Với số tiền là", highest_quarterly_revenue$total_amount))
+```
+
+
+## Heatmap correlation
+
+```{r, fig.width=15, fig.height=6.5}
+correlation_matrix <- cor(eda[, num_cols])
+ggcorrplot(correlation_matrix, lab = TRUE, method = "square", title = "Figure 8: Correlation heatmap of numerical columns")
+
+```
+
+
+
+## Kiểm định MANOVA
+```{r}
+manova_results <- manova(cbind(trip_distance, fare_amount, duration, total_amount) ~ VendorID, data = eda)
+summary(manova_results)
+```
+
+## Kiểm định ANOVA
+```{r}
+print("Kiểm định ANOVA cho total_amount")
+anova_results <- aov(total_amount ~ VendorID, data = eda)
+summary(anova_results)
+
+anova_results <- aov(duration ~ VendorID, data = eda)
+print("Kiểm định ANOVA cho duration")
+summary(anova_results)
+
+anova_results <- aov(fare_amount ~ VendorID, data = eda)
+print("Kiểm định ANOVA cho fare_amount")
+summary(anova_results)
+
+anova_results <- aov(trip_distance ~ VendorID, data = eda)
+print("Kiểm định ANOVA cho trip_distance")
+summary(anova_results)
+```
+
+
+# Phân tích dữ liệu bằng phương pháp PCA  
+```{r}
+data.pca <- PCA(eda[, num_cols], graph=F)
+eig.val <- get_eigenvalue(data.pca)
+```
+
+```{r}
+eig.val
+```
+
+## Scree Plot  
+
+```{r}
+fviz_eig(data.pca, addlabels = TRUE, ylim = c(0, 100)) +
+  labs(title = "Scree Plot", x = "Principal Component", y = "Percentage of Variance") +
+  theme_minimal()
+```
+
+## Loading
+```{r, fig.width=15, fig.height=6.5}
+loadings <- as.data.frame(data.pca$var$coord)
+loadings$Variable <- rownames(loadings)
+loadings
+
+p1 <- ggplot(loadings, aes(x = reorder(Variable, Dim.1), y = Dim.1)) +
+  geom_bar(stat = "identity", fill = "cornsilk4") +
+  coord_flip() +
+  labs(title = "Loadings on PC1", x = "Variables", y = "Loadings") +
+  theme_minimal() +
+  theme(
+        plot.title = element_text(size = 14), 
+        axis.title.x = element_text(size = 14), 
+        axis.title.y = element_text(size = 14), 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14),
+        legend.title = element_text(size = 14), 
+        legend.text = element_text(size = 14)   
+    )
+
+p2 <- ggplot(loadings, aes(x = reorder(Variable, Dim.2), y = Dim.2)) +
+  geom_bar(stat = "identity", fill = "coral3") +
+  coord_flip() +
+  labs(title = "Loadings on PC2", x = "Variables", y = "Loadings") +
+  theme_minimal() +
+  theme(
+        plot.title = element_text(size = 14), 
+        axis.title.x = element_text(size = 14), 
+        axis.title.y = element_text(size = 14), 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14),
+        legend.title = element_text(size = 14), 
+        legend.text = element_text(size = 14)   
+    )
+
+p3 <- ggplot(loadings, aes(x = reorder(Variable, Dim.3), y = Dim.3)) +
+  geom_bar(stat = "identity", fill = "aquamarine4") +
+  coord_flip() +
+  labs(title = "Loadings on PC3", x = "Variables", y = "Loadings") +
+  theme_minimal() + 
+  theme(
+        plot.title = element_text(size = 14), 
+        axis.title.x = element_text(size = 14), 
+        axis.title.y = element_text(size = 14), 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14),
+        legend.title = element_text(size = 14), 
+        legend.text = element_text(size = 14)   
+    )
+
+grid.arrange(p1, p2, p3, nrow = 2, ncol = 2)
+```
+
+
+## Contribution of Variables to Principal Components
+```{r, fig.width=15, fig.height=5}
+contrib_PC1 <- as.data.frame(data.pca$var$contrib[,1])
+colnames(contrib_PC1) <- c("Contribution")
+contrib_PC1$Variable <- rownames(contrib_PC1)
+
+contrib_PC2 <- as.data.frame(data.pca$var$contrib[,2])
+colnames(contrib_PC2) <- c("Contribution")
+contrib_PC2$Variable <- rownames(contrib_PC2)
+
+contrib_PC3 <- as.data.frame(data.pca$var$contrib[,3])
+colnames(contrib_PC3) <- c("Contribution")
+contrib_PC3$Variable <- rownames(contrib_PC3)
+
+p1 = ggplot(contrib_PC1, aes(x = reorder(Variable, Contribution), y = Contribution)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  labs(title = "Contribution of Variables to Dim 1", x = "", y = "Contribution (%)") +
+  theme_minimal()
+
+p2 = ggplot(contrib_PC2, aes(x = reorder(Variable, Contribution), y = Contribution)) +
+  geom_bar(stat = "identity", fill = "salmon") +
+  coord_flip() +
+  labs(title = "Contribution of Variables to Dim 2", x = "", y = "Contribution (%)") +
+  theme_minimal()
+
+p3 = ggplot(contrib_PC3, aes(x = reorder(Variable, Contribution), y = Contribution)) +
+  geom_bar(stat = "identity", fill = "purple") +
+  coord_flip() +
+  labs(title = "Contribution of Variables to Dim 3", x = "", y = "Contribution (%)") +
+  theme_minimal()
+
+grid.arrange(p1,
+             p2,
+             p3,
+             nrow=1)
+```
+
+## Biplot
+```{r}
+p1 <-  fviz_pca_var(data.pca,
+               col.var = "contrib",
+               gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+               repel = TRUE)
+
+p2 <- fviz_pca_var(data.pca, axes = c(2, 3),
+             col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE)
+grid.arrange(p1, p2, nrow = 1)
+```
+
+```{r}
+fviz_pca_biplot(data.pca, axes = c(1, 2), geom = "point", col.var = "contrib")
+```
+```{r}
+fviz_pca_biplot(data.pca, axes = c(2, 3), geom = "point", col.var = "contrib")
+```
+
+
+```{r, fig.width=15, fig.height=6.5}
+# merge biplot pc1 pc2 pc3
+biplot_pc1_pc2 <- fviz_pca_biplot(data.pca, axes = c(1, 2), geom = "point", col.var = "contrib")
+biplot_pc2_pc3 <- fviz_pca_biplot(data.pca, axes = c(2, 3), geom = "point", col.var = "contrib")
+grid.arrange(biplot_pc1_pc2, biplot_pc2_pc3, nrow = 1)
+```
+
+```{r}
+# pca 3d
+explained_variance <- data.pca$eig[, 2] 
+pca_3d <- as.data.frame(data.pca$ind$coord)
+pca_3d$VendorID <- data$VendorID
+
+plot_ly(pca_3d, x = ~Dim.1, y = ~Dim.2, z = ~Dim.3, color = ~VendorID, colors = c("#00AFBB", "salmon")) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = paste0('Dim1 (', round(explained_variance[1], 2), '%)')),
+                      yaxis = list(title = paste0('Dim2 (', round(explained_variance[2], 2), '%)')),
+                      zaxis = list(title = paste0('Dim3 (', round(explained_variance[3], 2), '%)'))),
+         title = "3D PCA Plot of Psychological Data")
+```
+
+```{r}
+eda
+```
+
+
+
+
+# Phân tích nhân tố (FA)  
+Thông thường, trước khi tiến hành phân tích thành phần chính (PCA) và EFA, ta phải kiểm tra xem dữ liệu ta thu thập được có phù hợp cho phân tích hay không. Hai phương pháp kiểm định thường dùng để làm điều này là kiểm định KMO và Bartlett  
+## Kiểm định KMO  
+
+```{r}
+kmo_fa <- KMO(eda[, num_cols])
+kmo_fa
+```
+
+ Một bộ dữ liệu được xem là phù hợp để phân tích EFA thường có giá trị KMO Test tối thiểu là 0.5. Trong trường hợp này, giá trị KMO Test là 0.64, vì vậy ta có thể tiến hành phân tích nhân tố cho bộ dữ liệu.  
+ 
+## Kiểm định Bartlett  
+```{r}
+cortest.bartlett(eda[, num_cols])
+```
+ Bartlett Test có giá trị 19334.49, bậc tự do là  45 và trị số p (p value =0) nhỏ hơn <5%, có nghĩa là quan hệ giữa các biến (items) đủ lớn để sử dụng phân tích EFA.  
+
+## Xác định số lượng các nhân tố chính rút ra  
+Trong phân tích EFA, căn cứ để xác định các nhân tố chính được rút ra là sử dụng giá trị của Eigenvalue. Theo tiêu chuẩn của Kaiser thì nhân tố chính được rút ra phải có Eigenvalue > 1. Một tiêu chuẩn khác ít nghiêm ngặt hơn đó là tiêu chuẩn của Jolliffe, theo Jolliffe thì các nhân tố có Eigenvalue > 0.7 có thể được chọn. Trong bộ dữ liệu này, số lượng nhân tố chính được rút ra dựa vào tiêu chuẩn của Kaiser.  
+
+```{r}
+fviz_eig(data.pca, addlabels = TRUE, ylim = c(0, 100), n=10) +
+  labs(title = "Scree Plot", x = "Principal Component", y = "Percentage of Variance") +
+  theme_minimal()
+```
+
+Xác định các biến cấu thành nhân tố được rút ra, đặt tên nhân tố  
+
+Ở trên, sử dụng Eigenvalue theo tiêu chuẩn Kaiser ta đã trích ra được 3 nhân tố chính, để biết các nhân tố này được cấu thành từ những biến (items) nào ta sử dụng phép xoay Varimax.  
+print.psych(pc2, cut = 3, sort = TRUE) # Loại bỏ các biến có hệ số tải (Factor Loading) bé hơn 0.4  
+```{r}
+pc2 = principal(eda[, num_cols], nfactors = 3, rotate = "varimax")
+print.psych(pc2, cut = 0.4, sort = TRUE)
+```
+
+- Theo kết quả trên ta thấy với nhân tố thứ nhất, các biến cấu thành nên nhân tố này là `trip_distance`, `fare_amount`, `duration`, `total_amount`, tolls_amount', 'tip_amount'.  Các biến này đều liên quan đến các khía cạnh chi phí và khoảng cách của chuyến đi, bao gồm chi phí cơ bản, chi phí phụ (như phí cầu đường và tiền tip), và các yếu tố thời gian và khoảng cách của chuyến đi. Vì vậy, ta có thể đặt tên cho nhân tố thứ nhất này là "Chi phí và Khoảng cách Chuyến đi".  
+- Với nhân tố thứ hai, các biến cấu thành nên nhân tố này là 'mta_tax', 'improvement_surcharge'. Các biến này đều liên quan đến các khoản phí và thuế bổ sung được tính thêm vào chi phí chuyến đi. Vì vậy, ta có thể đặt tên cho nhân tố thứ hai này là "Phí và Thuế Bổ sung.  
+- Với nhân tố thứ ba, các biến cấu thành nên nhân tố này là 'passenger_count'. Biến này liên quan đến số lượng hành khách trong mỗi chuyến đi. Vì vậy, ta có thể đặt tên cho nhân tố thứ ba này là "Số lượng Hành khách".  
+
+## Kiểm định Cronbach Alpha cho thang đo  
+Để kiểm tra thang đo nhân tố được rút ra được tạo thành từ các biến có phù hợp hay không ta sử dụng kiểm định Cronbach Alpha. Chẳng hạn để kiểm định xem nhân tố thứ nhất đặt tên là “Chi phí và khoảng cách” được cấu thành từ 6 biến có phù hợp không, ta sử dụng lệnh sau  
+
+```{r}
+psych::alpha(eda[, c('trip_distance', 'fare_amount', 'duration', 'total_amount', 'tolls_amount', 'tip_amount')])
+```
+
+Một thang đo được xem là hợp lý nếu giá trị Cronbach Alpha > 0.7. Trong bộ dữ liệu này, giá trị Cronbach Alpha là ~0,86 nên có thể nói rằng thang đo “Chi phí và khoảng cách” được cấu hình thành từ 7 biến (items) là hợp lý.Tương tự, thực hiện kiểm tra thang đo cho 2 nhân tố còn lại.  
+
+```{r}
+psych::alpha(eda[, c('mta_tax', 'improvement_surcharge')])
+```
+
+
+```{r}
+psych::alpha(eda[, c('passenger_count', 'extra', 'mta_tax', 'improvement_surcharge')])
+
+```
+
+
+
+
+
+
+
+
