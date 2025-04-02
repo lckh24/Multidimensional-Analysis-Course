@@ -1,8 +1,8 @@
-# Stress Analysis
+# Stress Analysis  
 
 Analysis of stress and mental health of 1100 students across 21 factors (anxiety, depression, sleep, academic pressure, etc.) from `StressLevelDataset.csv`.
 
-## Overview
+## Overview  
 - **Author:** Khanh Le  
 - **Date:** 17/06/2024  
 - **Objective:** Identify the key factors affecting stress and propose improvements.
