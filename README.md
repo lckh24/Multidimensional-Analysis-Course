@@ -1,20 +1,21 @@
-# Stress Analysis  
+*To view report: Open `stress_analysis.md`*  
+# Stress Analysis    
 
-Analysis of stress and mental health of 1100 students across 21 factors (anxiety, depression, sleep, academic pressure, etc.) from `StressLevelDataset.csv`.
+Analysis of stress and mental health of 1100 students across 21 factors (anxiety, depression, sleep, academic pressure, etc.) from `StressLevelDataset.csv`.  
 
-## Overview  
+## Overview    
 - **Author:** Khanh Le  
 - **Date:** 17/06/2024  
 - **Objective:** Identify the key factors affecting stress and propose improvements.
 
-## Methods
+## Methods  
 - **EDA:** Histogram, boxplot, 3D scatter plot.  
 - **Correlation:** Stress is strongly related to depression (0.73), anxiety (0.74), sleep (-0.75).  
 - **PCA:** 4 components (72.3% variance).  
 - **EFA:** 3 main factors (KMO = 0.97).  
 - **Statistics:** MANOVA/ANOVA (p < 0.05).
 
-## Key Findings
+## Key Findings  
 - **Mental health history:** Students with a mental health history have higher anxiety (~13), depression (~15), and stress (~1.5) levels compared to those without (anxiety ~9, depression ~10, stress ~0.5).  
 - **Physiological factors:**  
   - 50% (550/1100) report poor sleep (score ≤ 2/5).  
@@ -33,9 +34,9 @@ Analysis of stress and mental health of 1100 students across 21 factors (anxiety
   - 41.6% (458/1100) have strong social support (score ≥ 3/3).  
   - 96.9% (1066/1100) participate in extracurricular activities (score ≥ 1/5).  
 
-## Recommendations
-Based on the findings, specific solutions to reduce stress include:  
-- **Improving the learning environment:**  
+## Recommendations  
+Based on the findings, specific solutions to reduce stress include:    
+- **Improving the learning environment:**    
   - Reduce noise by installing soundproof materials in classrooms or dormitories (25% of students are affected).  
   - Enhance school security (16.7% of students feel unsafe) through surveillance cameras or security personnel.  
 - **Mental health support:**  
@@ -48,7 +49,7 @@ Based on the findings, specific solutions to reduce stress include:
   - Launch anti-bullying campaigns (96.45% of students are affected) with workshops and clear penalties.  
   - Strengthen extracurricular clubs and peer support networks to enhance social support (41.6% currently have it).  
 
-## Conclusion
+## Conclusion  
 The analysis shows that student stress is not only caused by academic pressure but also by physiological factors (sleep, headaches), environmental factors (noise, safety), and social factors (bullying). The strong correlation between stress, anxiety (0.74), and depression (0.73) highlights the importance of early intervention. Implementing the recommendations above will not only reduce stress but also improve quality of life and academic performance. This study provides a data-driven foundation for educators and parents to take action, particularly for students with a mental health history.
 ---
-*To view report: Open `stress_analysis.md`*
+
