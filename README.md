@@ -50,5 +50,5 @@ Dựa trên kết quả, các giải pháp cụ thể để giảm căng thẳng
   - Tăng cường câu lạc bộ ngoại khóa và mạng lưới hỗ trợ bạn bè để củng cố hỗ trợ xã hội (41.6% hiện có).  
 
 ## Kết luận
-Phân tích cho thấy căng thẳng ở học sinh không chỉ xuất phát từ áp lực học tập mà còn từ các yếu tố sinh lý (giấc ngủ, đau đầu), môi trường (tiếng ồn, an toàn), và xã hội (bắt nạt). Mối quan hệ chặt chẽ giữa căng thẳng với lo âu (0.74) và trầm cảm (0.73) nhấn mạnh tầm quan trọng của can thiệp sớm. Việc áp dụng các đề xuất trên không chỉ giảm căng thẳng mà còn nâng cao chất lượng cuộc sống và thành tích học tập. Nghiên cứu này cung cấp cơ sở dữ liệu để các nhà giáo dục và phụ huynh hành động, đặc biệt với nhóm học sinh có tiền sử tâm thần.
+* Phân tích cho thấy căng thẳng ở học sinh không chỉ xuất phát từ áp lực học tập mà còn từ các yếu tố sinh lý (giấc ngủ, đau đầu), môi trường (tiếng ồn, an toàn), và xã hội (bắt nạt). Mối quan hệ chặt chẽ giữa căng thẳng với lo âu (0.74) và trầm cảm (0.73) nhấn mạnh tầm quan trọng của can thiệp sớm. Việc áp dụng các đề xuất trên không chỉ giảm căng thẳng mà còn nâng cao chất lượng cuộc sống và thành tích học tập. Nghiên cứu này cung cấp cơ sở dữ liệu để các nhà giáo dục và phụ huynh hành động, đặc biệt với nhóm học sinh có tiền sử tâm thần.
 ---
