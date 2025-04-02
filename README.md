@@ -50,6 +50,6 @@ Based on the findings, specific solutions to reduce stress include:
   - Strengthen extracurricular clubs and peer support networks to enhance social support (41.6% currently have it).  
 
 ## Conclusion  
-The analysis shows that student stress is not only caused by academic pressure but also by physiological factors (sleep, headaches), environmental factors (noise, safety), and social factors (bullying). The strong correlation between stress, anxiety (0.74), and depression (0.73) highlights the importance of early intervention. Implementing the recommendations above will not only reduce stress but also improve quality of life and academic performance. This study provides a data-driven foundation for educators and parents to take action, particularly for students with a mental health history.
+- The analysis shows that student stress is not only caused by academic pressure but also by physiological factors (sleep, headaches), environmental factors (noise, safety), and social factors (bullying). The strong correlation between stress, anxiety (0.74), and depression (0.73) highlights the importance of early intervention. Implementing the recommendations above will not only reduce stress but also improve quality of life and academic performance. This study provides a data-driven foundation for educators and parents to take action, particularly for students with a mental health history.  
 ---
 
