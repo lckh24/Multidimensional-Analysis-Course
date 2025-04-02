@@ -2,8 +2,9 @@
 title: "Stress Analysis"
 author: "Khanh Le"
 date: "2024-06-17"
-output: github_document
-always_allow_html: true
+output: 
+  html_document:
+    keep_md: true
 ---
 
 # [Import dữ liệu và các thư viện cần thiết]()
