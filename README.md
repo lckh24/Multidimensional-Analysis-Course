@@ -1,4 +1,4 @@
-*Chi tiết: stress_analysis.html*
+*Chi tiết: stress_analysis.md*
 # Stress Analysis
 
 Phân tích căng thẳng và sức khỏe tâm thần của 1100 học sinh qua 21 yếu tố (lo âu, trầm cảm, giấc ngủ, áp lực học tập, v.v.) từ StressLevelDataset.csv.
